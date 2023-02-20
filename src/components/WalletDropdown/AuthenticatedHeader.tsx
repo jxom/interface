@@ -3,10 +3,8 @@ import { sendAnalyticsEvent } from '@uniswap/analytics'
 import { InterfaceEventName } from '@uniswap/analytics-events'
 import { formatUSDPrice } from '@uniswap/conedison/format'
 import { CurrencyAmount, Token } from '@uniswap/sdk-core'
-import { useWeb3React } from '@web3-react/core'
 import { ButtonEmphasis, ButtonSize, LoadingButtonSpinner, ThemeButton } from 'components/Button'
 import Tooltip from 'components/Tooltip'
-import { getConnection } from 'connection/utils'
 import { getChainInfoOrDefault } from 'constants/chainInfo'
 import { SupportedChainId } from 'constants/chains'
 import { BaseVariant } from 'featureFlags'
@@ -27,6 +25,7 @@ import { useFiatOnrampAck } from 'state/user/hooks'
 import { updateSelectedWallet } from 'state/user/reducer'
 import styled, { css, keyframes } from 'styled-components/macro'
 import { ExternalLink, ThemedText } from 'theme'
+import { useAccount, useDisconnect, useEnsName, useNetwork } from 'wagmi'
 
 import { shortenAddress } from '../../nft/utils/address'
 import { useCloseModal, useFiatOnrampAvailability, useOpenModal, useToggleModal } from '../../state/application/hooks'
@@ -177,17 +176,24 @@ const HeaderWrapper = styled.div`
 `
 
 const AuthenticatedHeader = () => {
-  const { account, chainId, connector, ENSName } = useWeb3React()
+  const { address, connector } = useAccount()
+  const { data: ensName } = useEnsName({ address })
+  const { chain } = useNetwork()
+  const dispatch = useAppDispatch()
+  const { disconnectAsync } = useDisconnect({
+    onSuccess: () => {
+      dispatch(updateSelectedWallet({ wallet: undefined }))
+    },
+  })
+  const balanceString = useCurrencyBalanceString(address ?? '')
   const [isCopied, setCopied] = useCopyClipboard()
   const copy = useCallback(() => {
-    setCopied(account || '')
-  }, [account, setCopied])
-  const dispatch = useAppDispatch()
-  const balanceString = useCurrencyBalanceString(account ?? '')
+    setCopied(address || '')
+  }, [address, setCopied])
   const {
     nativeCurrency: { symbol: nativeCurrencySymbol },
     explorer,
-  } = getChainInfoOrDefault(chainId ? chainId : SupportedChainId.MAINNET)
+  } = getChainInfoOrDefault(chain?.id ? chain?.id : SupportedChainId.MAINNET)
   const navigate = useNavigate()
   const closeModal = useCloseModal()
   const setSellPageState = useProfilePageState((state) => state.setProfilePageState)
@@ -195,20 +201,12 @@ const AuthenticatedHeader = () => {
   const clearCollectionFilters = useWalletCollections((state) => state.clearCollectionFilters)
   const isClaimAvailable = useIsNftClaimAvailable((state) => state.isClaimAvailable)
 
-  const unclaimedAmount: CurrencyAmount<Token> | undefined = useUserUnclaimedAmount(account)
-  const isUnclaimed = useUserHasAvailableClaim(account)
-  const connectionType = getConnection(connector).type
+  const unclaimedAmount: CurrencyAmount<Token> | undefined = useUserUnclaimedAmount(address)
+  const isUnclaimed = useUserHasAvailableClaim(address)
   const nativeCurrency = useNativeCurrency()
   const nativeCurrencyPrice = useStablecoinPrice(nativeCurrency ?? undefined)
   const openClaimModal = useToggleModal(ApplicationModal.ADDRESS_CLAIM)
   const openNftModal = useToggleModal(ApplicationModal.UNISWAP_NFT_AIRDROP_CLAIM)
-  const disconnect = useCallback(() => {
-    if (connector && connector.deactivate) {
-      connector.deactivate()
-    }
-    connector.resetState()
-    dispatch(updateSelectedWallet({ wallet: undefined }))
-  }, [connector, dispatch])
 
   const amountUSD = useMemo(() => {
     if (!nativeCurrencyPrice || !balanceString) return undefined
@@ -278,24 +276,24 @@ const AuthenticatedHeader = () => {
     <>
       <HeaderWrapper>
         <FlexContainer>
-          <StatusIcon connectionType={connectionType} size={24} />
-          {ENSName ? (
+          <StatusIcon connector={connector} size={24} />
+          {ensName ? (
             <AccountNamesWrapper>
-              <ENSNameContainer>{ENSName}</ENSNameContainer>
-              <AccountContainer>{account && shortenAddress(account, 2, 4)}</AccountContainer>
+              <ENSNameContainer>{ensName}</ENSNameContainer>
+              <AccountContainer>{address && shortenAddress(address, 2, 4)}</AccountContainer>
             </AccountNamesWrapper>
           ) : (
-            <ThemedText.SubHeader marginTop="2.5px">{account && shortenAddress(account, 2, 4)}</ThemedText.SubHeader>
+            <ThemedText.SubHeader marginTop="2.5px">{address && shortenAddress(address, 2, 4)}</ThemedText.SubHeader>
           )}
         </FlexContainer>
         <IconContainer>
           <IconButton onClick={copy} Icon={Copy}>
             {isCopied ? <Trans>Copied!</Trans> : <Trans>Copy</Trans>}
           </IconButton>
-          <IconButton href={`${explorer}address/${account}`} target="_blank" Icon={ExternalLinkIcon}>
+          <IconButton href={`${explorer}address/${address}`} target="_blank" Icon={ExternalLinkIcon}>
             <Trans>Explore</Trans>
           </IconButton>
-          <IconButton data-testid="wallet-disconnect" onClick={disconnect} Icon={Power}>
+          <IconButton data-testid="wallet-disconnect" onClick={async () => await disconnectAsync()} Icon={Power}>
             <Trans>Disconnect</Trans>
           </IconButton>
         </IconContainer>

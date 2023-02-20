@@ -1,8 +1,11 @@
 import { useWeb3React } from '@web3-react/core'
-import { ConnectionType } from 'connection'
 import useENSAvatar from 'hooks/useENSAvatar'
 import styled from 'styled-components/macro'
 import { flexColumnNoWrap } from 'theme/styles'
+import { Connector } from 'wagmi'
+import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet'
+import { InjectedConnector } from 'wagmi/connectors/injected'
+import { WalletConnectConnector } from 'wagmi/connectors/walletConnect'
 
 import CoinbaseWalletIcon from '../../assets/images/coinbaseWalletIcon.svg'
 import WalletConnectIcon from '../../assets/images/walletConnectIcon.svg'
@@ -50,24 +53,24 @@ const Socks = () => {
   )
 }
 
-const useIcon = (connectionType: ConnectionType) => {
+const useIcon = (connector?: Connector) => {
   const { account } = useWeb3React()
   const { avatar } = useENSAvatar(account ?? undefined)
 
-  if (avatar || connectionType === ConnectionType.INJECTED) {
+  if (avatar || connector instanceof InjectedConnector) {
     return <Identicon />
-  } else if (connectionType === ConnectionType.WALLET_CONNECT) {
+  } else if (connector instanceof WalletConnectConnector) {
     return <img src={WalletConnectIcon} alt="WalletConnect" />
-  } else if (connectionType === ConnectionType.COINBASE_WALLET) {
+  } else if (connector instanceof CoinbaseWalletConnector) {
     return <img src={CoinbaseWalletIcon} alt="Coinbase Wallet" />
   }
 
   return undefined
 }
 
-export default function StatusIcon({ connectionType, size }: { connectionType: ConnectionType; size?: number }) {
+export default function StatusIcon({ connector, size }: { connector?: Connector; size?: number }) {
   const hasSocks = useHasSocks()
-  const icon = useIcon(connectionType)
+  const icon = useIcon(connector)
 
   return (
     <IconWrapper size={size ?? 16}>

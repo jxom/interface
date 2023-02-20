@@ -1,4 +1,5 @@
 import '@reach/dialog/styles.css'
+import '@rainbow-me/rainbowkit/styles.css'
 import 'inter-ui'
 import 'polyfills'
 import 'components/analytics'

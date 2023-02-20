@@ -1,4 +1,3 @@
-import { useWeb3React } from '@web3-react/core'
 import { getChainInfo } from 'constants/chainInfo'
 import { SupportedChainId } from 'constants/chains'
 import { useOnClickOutside } from 'hooks/useOnClickOutside'
@@ -14,6 +13,7 @@ import { useIsMobile } from 'nft/hooks'
 import { useCallback, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'react-feather'
 import { useTheme } from 'styled-components/macro'
+import { useNetwork } from 'wagmi'
 
 import * as styles from './ChainSelector.css'
 import ChainSelectorRow from './ChainSelectorRow'
@@ -32,7 +32,7 @@ interface ChainSelectorProps {
 }
 
 export const ChainSelector = ({ leftAlign }: ChainSelectorProps) => {
-  const { chainId } = useWeb3React()
+  const { chain } = useNetwork()
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const isMobile = useIsMobile()
 
@@ -42,7 +42,7 @@ export const ChainSelector = ({ leftAlign }: ChainSelectorProps) => {
   const modalRef = useRef<HTMLDivElement>(null)
   useOnClickOutside(ref, () => setIsOpen(false), [modalRef])
 
-  const info = chainId ? getChainInfo(chainId) : undefined
+  const info = chain?.id ? getChainInfo(chain?.id) : undefined
 
   const selectChain = useSelectChain()
   useSyncChainQuery()
@@ -59,7 +59,7 @@ export const ChainSelector = ({ leftAlign }: ChainSelectorProps) => {
     [selectChain, setIsOpen]
   )
 
-  if (!chainId) {
+  if (!chain?.id) {
     return null
   }
 

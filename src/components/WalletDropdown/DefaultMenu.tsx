@@ -1,13 +1,13 @@
 import { Trans } from '@lingui/macro'
-import { useWeb3React } from '@web3-react/core'
+import { ConnectButton as RKConnectButton } from '@rainbow-me/rainbowkit'
 import { TransactionSummary } from 'components/AccountDetailsV2'
 import { ButtonPrimary } from 'components/Button'
 import { useActiveLocale } from 'hooks/useActiveLocale'
 import { useMemo } from 'react'
 import { ChevronRight, Moon, Sun } from 'react-feather'
-import { useToggleWalletModal } from 'state/application/hooks'
 import { useDarkModeManager } from 'state/user/hooks'
 import styled from 'styled-components/macro'
+import { useAccount } from 'wagmi'
 
 import { useAllTransactions } from '../../state/transactions/hooks'
 import AuthenticatedHeader from './AuthenticatedHeader'
@@ -104,13 +104,12 @@ const CenterVertically = styled.div`
 `
 
 const WalletDropdown = ({ setMenu }: { setMenu: (state: MenuState) => void }) => {
-  const { account } = useWeb3React()
-  const isAuthenticated = !!account
+  const { address } = useAccount()
+  const isAuthenticated = !!address
   const [darkMode, toggleDarkMode] = useDarkModeManager()
   const activeLocale = useActiveLocale()
   const ISO = activeLocale.split('-')[0].toUpperCase()
   const allTransactions = useAllTransactions()
-  const toggleWalletModal = useToggleWalletModal()
 
   const pendingTransactions = useMemo(
     () => Object.values(allTransactions).filter((tx) => !tx.receipt),
@@ -126,9 +125,15 @@ const WalletDropdown = ({ setMenu }: { setMenu: (state: MenuState) => void }) =>
       {isAuthenticated ? (
         <AuthenticatedHeader />
       ) : (
-        <ConnectButton data-testid="wallet-connect-wallet" onClick={toggleWalletModal}>
-          Connect wallet
-        </ConnectButton>
+        <RKConnectButton.Custom>
+          {({ openConnectModal }) => {
+            return (
+              <ConnectButton data-testid="wallet-connect-wallet" onClick={() => openConnectModal()}>
+                Connect wallet
+              </ConnectButton>
+            )
+          }}
+        </RKConnectButton.Custom>
       )}
       <Divider />
       {isAuthenticated && (

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { VanillaExtractPlugin } = require('@vanilla-extract/webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const { resolve } = require('path')
 const { DefinePlugin } = require('webpack')
 
 const commitHash = require('child_process').execSync('git rev-parse HEAD')
@@ -33,6 +34,14 @@ module.exports = {
       )
       if (instanceOfMiniCssExtractPlugin !== undefined) instanceOfMiniCssExtractPlugin.options.ignoreOrder = true
 
+      // Webpack 4.x has trouble with pure ESM modules. We need to transpile them.
+      webpackConfig.module.rules[1].oneOf[2].include = [
+        resolve(__dirname, './src'),
+        /node_modules\/@?wagmi/,
+        /node_modules\/@walletconnect/,
+        /node_modules\/@web3modal/,
+      ]
+
       // We're currently on Webpack 4.x that doesn't support the `exports` field in package.json.
       // See https://github.com/webpack/webpack/issues/9509.
       //
@@ -41,6 +50,7 @@ module.exports = {
       // Map @uniswap/conedison to its dist folder.
       // This is required because conedison uses * to redirect all imports to its dist.
       webpackConfig.resolve.alias['@uniswap/conedison'] = '@uniswap/conedison/dist'
+      webpackConfig.resolve.alias['framer-motion'] = 'framer-motion/dist/framer-motion.js'
 
       return webpackConfig
     },
